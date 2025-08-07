@@ -10,6 +10,9 @@ import {
   getMaxApplicableDiscount,
   getRemainingStock,
 } from "./models/cart";
+import { extractNumber } from "./utils/validators";
+import { formatNumberWithUnit } from "./utils/formatters";
+import { useSearch } from "./hooks/useSearch";
 
 interface Notification {
   id: string;
@@ -34,8 +37,9 @@ const App = () => {
     "products"
   );
   const [showProductForm, setShowProductForm] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  // const [searchTerm, setSearchTerm] = useState("");
+  // const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const {} = useSearch();
 
   const [editingProduct, setEditingProduct] = useState<string | null>(null);
   const [productForm, setProductForm] = useState({
@@ -53,6 +57,8 @@ const App = () => {
     discountValue: 0,
   });
 
+  const totalItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
   const formatPrice = (price: number, productId?: string): string => {
     if (productId) {
       const product = products.find((p) => p.id === productId);
@@ -62,10 +68,10 @@ const App = () => {
     }
 
     if (isAdmin) {
-      return `${price.toLocaleString()}원`;
+      return formatNumberWithUnit(price, { suffix: "원" });
     }
 
-    return `₩${price.toLocaleString()}`;
+    return formatNumberWithUnit(price, { prefix: "₩" });
   };
 
   const addNotification = useCallback(
@@ -80,20 +86,9 @@ const App = () => {
     []
   );
 
-  const [totalItemCount, setTotalItemCount] = useState(0);
-
-  useEffect(() => {
-    const count = cart.reduce((sum, item) => sum + item.quantity, 0);
-    setTotalItemCount(count);
-  }, [cart]);
-
-  useEffect(() => {
-    localStorage.setItem("coupons", JSON.stringify(coupons));
-  }, [coupons]);
-
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
+      setDebouncedSearchTerm(searchTerm); // 이거 debounced Inptu으로 두는 게 낫지 않을 깜..
     }, 500);
     return () => clearTimeout(timer);
   }, [searchTerm]);
@@ -251,6 +246,8 @@ const App = () => {
   };
 
   const totals = calculateCartTotal(cart, selectedCoupon);
+
+  // 뭐에 대해 필터링한건데 ? 아아. 검색한거 .검색 걸린 거구낭. ㅎㅎ 검색 결과임
 
   const filteredProducts = debouncedSearchTerm
     ? products.filter(
@@ -577,7 +574,7 @@ const App = () => {
                               productForm.stock === 0 ? "" : productForm.stock
                             }
                             onChange={(e) => {
-                              const value = e.target.value;
+                              const value = extractNumber(e.target.value);
                               if (value === "" || /^\d+$/.test(value)) {
                                 setProductForm({
                                   ...productForm,
